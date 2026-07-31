@@ -22,8 +22,8 @@ class Gui_Calculator implements ActionListener {
         frame.setLayout(new BorderLayout());
         frame.setAlwaysOnTop(true);
 
-        displayInput = new JTextField("0");
-        displayOutput = new JTextField("0");
+        displayInput = new JTextField("");
+        displayOutput = new JTextField("=");
 
         displayInput.setEditable(false);
         displayOutput.setEditable(false);
@@ -76,6 +76,7 @@ class Gui_Calculator implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
+        String oldInput = "";
         String command = e.getActionCommand();
         switch (command) {
             case "C", "↺" -> {
@@ -83,25 +84,40 @@ class Gui_Calculator implements ActionListener {
                 firstOperand = 0;
                 operator = "";
                 startNewInput = false;
-                displayInput.setText("0");
+                displayInput.setText("");
+                displayOutput.setText("=");
             }
-            case "+", "-", "*", "÷","√", "^" -> {
-                if (currentInput.isEmpty()&&operator.equals("√")) {
+            case "+", "-", "*", "÷", "√", "^" -> {
+                // Handle square root as an immediate unary operation
+                if (command.equals("√")) {
+                    if (!currentInput.isEmpty()) {
+                        firstOperand = Double.parseDouble(currentInput);
+                    }
+                    operator = "√";
                     performCalculation();
-                } else {
+                    startNewInput = true;
+                    return;
+                }
+
+                // Standard binary operator logic
+                if (!currentInput.isEmpty()) {
                     if (operator.isEmpty()) {
                         firstOperand = Double.parseDouble(currentInput);
                     } else {
-                        performCalculation();
+                        performCalculation(); // Updates firstOperand with the result
                     }
-                    operator = command;
-                    startNewInput = true;
                 }
+
+                operator = command;
+                startNewInput = true;
+                displayInput.setText(firstOperand + " " + operator);
             }
             case "↵" -> {
-                performCalculation();
-                operator = "";
-                startNewInput = true;
+                if (!currentInput.isEmpty() && !operator.isEmpty()) {
+                    performCalculation();
+                    operator = "";
+                    startNewInput = true;
+                }
             }
             case null, default -> {
                 if (startNewInput) {
@@ -110,15 +126,18 @@ class Gui_Calculator implements ActionListener {
                 } else {
                     currentInput += command;
                 }
-                displayInput.setText(currentInput);
+                if (operator.isEmpty()) {
+                    displayInput.setText(currentInput);
+                } else {
+                    displayInput.setText(firstOperand + " " + operator + " " + currentInput);
+                }
             }
         }
     }
 
     private void performCalculation() {
         double secondOperand = Double.parseDouble(currentInput);
-        boolean undif = true;
-        if (secondOperand == 0) undif = false;
+        boolean undif = secondOperand != 0;
         String a = String.valueOf(firstOperand);
         switch (operator) {
             case "^" -> firstOperand = Math.pow(firstOperand, secondOperand);
