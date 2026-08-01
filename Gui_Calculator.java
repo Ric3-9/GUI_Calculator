@@ -15,6 +15,9 @@ class Gui_Calculator implements ActionListener {
     private String currentInput = "", operator = "";
     private double firstOperand = 0;
     private boolean startNewInput = false;
+    private boolean isManualInput = false;
+    private boolean detectManualInput = false;
+    private JButton manualInput = ButtonMaker.makeButton("MAN", this);
 
     public Gui_Calculator() {
         JFrame frame = new JFrame("Java_Gui_Calculator");
@@ -34,7 +37,7 @@ class Gui_Calculator implements ActionListener {
 
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(4, 5)); // 5 rows, 4 columns
+        buttonPanel.setLayout(new GridLayout(5, 5)); // 5 rows, 4 columns
         JButton clear = ButtonMaker.makeButton("↺", this);
         JButton dot = ButtonMaker.makeButton(".", this);
         JButton multiply = ButtonMaker.makeButton("*", this);
@@ -64,6 +67,7 @@ class Gui_Calculator implements ActionListener {
         }
         buttonPanel.add(dot);
         buttonPanel.add(equals);
+        buttonPanel.add(manualInput);
 
         frame.add(buttonPanel, BorderLayout.CENTER);
         frame.pack(); // Sizes the frame so that all its contents are at or above their preferred sizes
@@ -76,38 +80,42 @@ class Gui_Calculator implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        String oldInput = "";
         String command = e.getActionCommand();
         switch (command) {
-            case "C", "↺" -> {
+            case "C", "↺", "MAN", "BTN" -> {
                 currentInput = "";
                 firstOperand = 0;
                 operator = "";
                 startNewInput = false;
-                displayInput.setText("");
                 displayOutput.setText("=");
+                if (command.equals("MAN") || command.equals("BTN")) {
+                    isManualInput = !isManualInput;
+                    detectManualInput = isManualInput;
+                    displayInput.setEditable(isManualInput);
+                    if (isManualInput) {
+                        manualInput.setText("BTN");
+                    } else manualInput.setText("MAN");
+                } else {
+                    displayInput.setText("");
+                    detectManualInput = false;
+                    isManualInput = false;
+                    displayInput.setEditable(false);
+                }
             }
             case "+", "-", "*", "÷", "√", "^" -> {
-                // Handle square root as an immediate unary operation
                 if (command.equals("√")) {
-                    if (!currentInput.isEmpty()) {
-                        firstOperand = Double.parseDouble(currentInput);
-                    }
+                    if (!currentInput.isEmpty()) firstOperand = Double.parseDouble(currentInput);
                     operator = "√";
                     performCalculation();
                     startNewInput = true;
                     return;
                 }
-
-                // Standard binary operator logic
+                
                 if (!currentInput.isEmpty()) {
                     if (operator.isEmpty()) {
                         firstOperand = Double.parseDouble(currentInput);
-                    } else {
-                        performCalculation(); // Updates firstOperand with the result
-                    }
+                    } else performCalculation();
                 }
-
                 operator = command;
                 startNewInput = true;
                 displayInput.setText(firstOperand + " " + operator);
@@ -117,20 +125,42 @@ class Gui_Calculator implements ActionListener {
                     performCalculation();
                     operator = "";
                     startNewInput = true;
+                } else if (detectManualInput) {
+                    String inputText = displayInput.getText();
+                    StringBuilder firstStr = new StringBuilder();
+                    StringBuilder secondStr = new StringBuilder();
+                    boolean operatorFound = false;
+
+                    for (char c : inputText.toCharArray()) {
+                        if ("+-*÷^".indexOf(c) != -1) {
+                            operator = String.valueOf(c);
+                            operatorFound = true;
+                            continue;
+                        }
+                        if (Character.isDigit(c) || c == '.') {
+                            if (!operatorFound) {
+                                firstStr.append(c);
+                            } else secondStr.append(c);
+                        }
+                    }
+                    if (!firstStr.isEmpty()) firstOperand = Double.parseDouble(firstStr.toString());
+                    if (!secondStr.isEmpty()) currentInput = secondStr.toString();
+
+                    if (!operator.isEmpty() && !currentInput.isEmpty()) {
+                        performCalculation();
+                        operator = "";
+                        startNewInput = true;
+                    }
                 }
             }
             case null, default -> {
                 if (startNewInput) {
                     currentInput = command;
                     startNewInput = false;
-                } else {
-                    currentInput += command;
-                }
+                } else currentInput += command;
                 if (operator.isEmpty()) {
                     displayInput.setText(currentInput);
-                } else {
-                    displayInput.setText(firstOperand + " " + operator + " " + currentInput);
-                }
+                } else displayInput.setText(firstOperand + " " + operator + " " + currentInput);
             }
         }
     }
